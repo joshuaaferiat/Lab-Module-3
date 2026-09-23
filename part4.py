@@ -9,7 +9,6 @@ an on-screen temperature plot.
 import csv
 import re
 import sys
-import time
 from collections import deque
 
 import serial
@@ -18,15 +17,22 @@ from PySide6.QtWidgets import QApplication
 from pyqtgraph import PlotWidget
 
 PORT = "/dev/tty.usbmodem1101"  # Change for your machine, e.g. COM3 on Windows
-BAUD = 115200
+# These settings control the serial connection, display, and saved data.
+BAUD = 9600
 WINDOW_SECONDS = 60.0
 PLOT_INTERVAL_MS = 100
 TEMP_Y_MIN = 0.0
 TEMP_Y_MAX = 40.0
 OUTPUT_FILE = "part4_temperature_data.csv"
 
+# This matches the measurement line printed by m3_p3.ino.
 MEASUREMENT_PATTERN = re.compile(
-    r"Temperature \(C\):\s*([-+]?\d*\.?\d+)\s*,\s*Time \(s\):\s*([-+]?\d*\.?\d+)\s*,\s*PWM:\s*(\d+)\s*,\s*Heat/Cool:\s*([01])"
+    r"Temperature \(C\):\s*([-+]?\d*\.?\d+)"
+    r"\s*,\s*Time \(s\):\s*([-+]?\d*\.?\d+)"
+    r"\s*,\s*PWM:\s*(\d+)"
+    r"\s*,\s*Direction input:\s*[01]"
+    r"\s*,\s*Active PWM pin:\s*\d+"
+    r"\s*,\s*Heat/Cool:\s*([01])"
 )
 
 
@@ -46,19 +52,24 @@ def parse_measurement(line: str):
 
 class TemperatureStripChartApp:
     def __init__(self):
+        # Create the application window and temperature plot.
         self.app = QApplication(sys.argv)
         self.plot_widget = PlotWidget(title="Temperature vs Time")
         self.plot_widget.setYRange(TEMP_Y_MIN, TEMP_Y_MAX)
         self.plot_widget.setXRange(0, WINDOW_SECONDS)
 
+        # Keep the recent data needed for the rolling chart.
         self.time_history = deque()
         self.temperature_history = deque()
+
+        # Open the Arduino connection and prepare the CSV file.
         self.serial_port = serial.Serial(PORT, BAUD, timeout=0.1)
 
         self.csv_file = open(OUTPUT_FILE, "w", newline="")
         self.csv_writer = csv.writer(self.csv_file)
         self.csv_writer.writerow(["time_s", "temperature_C", "pwm", "heat_cool"])
 
+        # Read serial data regularly without blocking the user interface.
         self.timer = QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(PLOT_INTERVAL_MS)
@@ -73,10 +84,10 @@ class TemperatureStripChartApp:
                 continue
 
             print(
-                f"time_s={parsed['time_s']:.3f}, "
-                f"temperature_C={parsed['temperature_C']:.3f}, "
-                f"pwm={parsed['pwm']}, "
-                f"heat_cool={parsed['heat_cool']}"
+                f"Temperature (C): {parsed['temperature_C']:.2f}, "
+                f"Time (s): {parsed['time_s']:.2f}, "
+                f"PWM: {parsed['pwm']}, "
+                f"Heat/Cool: {parsed['heat_cool']}"
             )
 
             self.time_history.append(parsed["time_s"])
@@ -90,6 +101,12 @@ class TemperatureStripChartApp:
                 ]
             )
             self.csv_file.flush()
+
+            # Remove samples older than the selected rolling time window.
+            oldest_allowed = parsed["time_s"] - WINDOW_SECONDS
+            while self.time_history and self.time_history[0] < oldest_allowed:
+                self.time_history.popleft()
+                self.temperature_history.popleft()
 
         if len(self.time_history) >= 2:
             newest_time = self.time_history[-1]
