@@ -23,6 +23,49 @@ Completed before TEC power was applied.
 
 Wiring: power-supply V+/V- connect directly to H-bridge B+/B-. On the terminal bus, H-bridge M+ connects to one thermal-switch lead, the other thermal-switch lead connects to TEC+, and TEC- connects to H-bridge M-, so opening the thermal switch interrupts TEC current. The heat exchanger (pump and fans) is powered directly from the 12 V supply.
 
+## Part 2: First manual sketch - fixed direction
+
+Sketch: `arduino/tec_manual_fixed_direction/tec_manual_fixed_direction.ino` (9600 baud).
+
+Signal paths:
+
+- A0 thermistor -> average of 200 ADC readings -> temperature (Beta equation, 100 kOhm divider, B = 4540 K)
+- A1 trim pot -> ADC value -> PWM command 0-255 (`map()` then `constrain()`)
+- Fixed direction: pin 9 held LOW, trim-pot PWM sent to pin 10 -> H-bridge -> TEC
+
+Safety behavior: both H-bridge inputs are LOW at reset, and a startup latch holds PWM at 0 until the trim pot has been turned to zero once, so the TEC cannot start at a high PWM after a reset.
+
+Example serial line (Serial Monitor only, no plotting):
+
+```text
+Temperature (C): 27.73, Time (s): 645.06, PWM: 120, Active PWM pin: 10
+```
+
+### Direction test
+
+Performed at low PWM after instructor approval (pin 11, if wired, tied to 5 V).
+
+| Test | Pin 9 | Pin 10 | Observed TEC response |
+| --- | --- | --- | --- |
+| As written | LOW | PWM | Heating |
+| Pins 9/10 control leads swapped at the H-bridge | PWM | LOW | Cooling |
+
+This result is also the mapping used by the Part 6 sketch: HEAT = PWM on pin 10 with pin 9 LOW; COOL = PWM on pin 9 with pin 10 LOW.
+
+Serial record (paste several consecutive lines from each test):
+
+```text
+Heating (pin 10 PWM):
+TODO
+
+Cooling (leads swapped):
+TODO
+```
+
+### Why swapping the control leads reverses heating and cooling
+
+Pins 9 and 10 are logic-level inputs to the two half-bridges of the BTS7960. The input that receives PWM switches its half-bridge output (M+ or M-) toward 12 V, while the LOW input holds the other output at ground. Swapping the two control leads therefore swaps which TEC terminal is driven high, reversing the current through the TEC. By the Peltier effect, the direction of the current sets the direction heat is pumped across the TEC, so the plate with the thermistor changes from being heated to being cooled. The TEC power leads (M+/M-) were not moved; only the logic-level control signals were swapped.
+
 ## Recommended project structure
 
 - `arduino/tec_manual_fixed_direction/tec_manual_fixed_direction.ino` — first manual trim-pot sketch
