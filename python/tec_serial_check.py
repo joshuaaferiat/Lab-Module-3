@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Part 7: integrated manual-control verification helper.
+"""Part 5/7: integrated manual-control verification helper.
 
 This script is a simple serial checker for the paired Part 5 GUI and Part 6
 Arduino program. It sends a few low-risk commands and prints the resulting

@@ -1,11 +1,20 @@
-// Phys 39 Module 3 - Part 3
-// Python-commanded TEC control
-// A0: thermistor
-// Pin 9 / Pin 10: H-bridge control signals
+// Phys 39 Module 3 - Part 6
+// Arduino serial-command control sketch
 //
-// Experimentally verified direction mapping:
-//   HEAT -> pin 9 LOW, pin 10 PWM
-//   COOL -> pin 9 PWM, pin 10 LOW
+// A0: thermistor (averaged)
+// Pin 9 / Pin 10: H-bridge control signals
+// No trim pot, no pin 11 switch.
+//
+// Receives commands from the Python GUI:
+//   SET PWM 120 DIR HEAT
+//   SET PWM 45 DIR COOL
+//
+// Prints measurement lines:
+//   Temperature (C): 27.73, Time (s): 645.06, PWM: 120, Direction input: 1, Active PWM pin: 9, Heat/Cool: 1
+//
+// Heat/Cool = 1 only for observed HEATING.
+// Heat/Cool = 0 only for observed COOLING.
+// This is open-loop manual control. No feedback control.
 
 const int THERMISTOR_PIN = A0;
 const int HBRIDGE_PIN_1 = 9;
@@ -21,11 +30,37 @@ const float NOMINAL_TEMPERATURE_C = 25.0;
 const float BETA_COEFFICIENT = 4540.0;
 const float ADC_MAX = 1023.0;
 
+// ------------------------------------------------------------------
+// EXPERIMENTALLY VERIFIED PART 3 MAPPING
+// ------------------------------------------------------------------
+// Set these two flags after your Part 3 experiment.
+//
+// HEAT_ACTIVE_PIN  = the Arduino pin that must output PWM when HEATING.
+// COOL_ACTIVE_PIN  = the Arduino pin that must output PWM when COOLING.
+//
+// In the Part 3 sketch, pin 11 HIGH -> pin 9 PWM, pin 11 LOW -> pin 10 PWM.
+// If your Part 3 test showed that pin 9 heated and pin 10 cooled, keep:
+//   HEAT_ACTIVE_PIN = 9
+//   COOL_ACTIVE_PIN = 10
+// If your experiment showed the opposite, swap these two values.
+const int HEAT_ACTIVE_PIN = 9;
+const int COOL_ACTIVE_PIN = 10;
+
+// ------------------------------------------------------------------
+// STATE
+// ------------------------------------------------------------------
+int currentPwm = 0;          // 0-255, starts at 0
+bool currentIsHeat = true;   // true = HEAT, false = COOL, starts as HEAT
+
 unsigned long startTime;
 unsigned long lastPrint = 0;
-int pwm = 0;
-bool heating = false;
 
+// Serial line buffer for incoming commands.
+String commandBuffer = "";
+
+// ------------------------------------------------------------------
+// THERMISTOR MEASUREMENT (same as Part 2 / Part 3)
+// ------------------------------------------------------------------
 float readTemperatureC() {
   long sum = 0;
 
@@ -40,11 +75,8 @@ float readTemperatureC() {
     return NAN;
   }
 
-  // Divider assumption:
-  // 5V -> series resistor -> A0 -> thermistor -> GND
   float resistance = SERIES_RESISTOR * adc / (ADC_MAX - adc);
 
-  // Beta equation
   float steinhart = resistance / NOMINAL_RESISTANCE;
   steinhart = log(steinhart);
   steinhart /= BETA_COEFFICIENT;
@@ -55,126 +87,162 @@ float readTemperatureC() {
   return steinhart;
 }
 
+// ------------------------------------------------------------------
+// SAFETY: apply PWM to the H-bridge
+// ------------------------------------------------------------------
+// Only one H-bridge input gets PWM at a time. The other is held LOW.
+// This prevents both inputs being active at once.
 void applyOutput() {
-  // Only one bridge input receives PWM; the other stays LOW.
-  if (heating) {
-    analogWrite(HBRIDGE_PIN_1, 0);
-    analogWrite(HBRIDGE_PIN_2, pwm);
+  int pwmPin;
+  int lowPin;
+
+  if (currentIsHeat) {
+    pwmPin = HEAT_ACTIVE_PIN;
+    lowPin = COOL_ACTIVE_PIN;
   } else {
-    analogWrite(HBRIDGE_PIN_1, pwm);
-    analogWrite(HBRIDGE_PIN_2, 0);
+    pwmPin = COOL_ACTIVE_PIN;
+    lowPin = HEAT_ACTIVE_PIN;
   }
+
+  // Make sure both pins are digital outputs.
+  pinMode(HBRIDGE_PIN_1, OUTPUT);
+  pinMode(HBRIDGE_PIN_2, OUTPUT);
+
+  // Hold the inactive pin LOW, then write PWM on the active pin.
+  digitalWrite(lowPin, LOW);
+  analogWrite(pwmPin, currentPwm);
 }
 
-bool parsePwm(String text, int &value) {
-  if (text.length() == 0) {
-    return false;
-  }
-
-  int index = 0;
-  bool negative = false;
-  char first = text.charAt(0);
-  if (first == '-' || first == '+') {
-    negative = first == '-';
-    index++;
-  }
-  if (index == text.length()) {
-    return false;
-  }
-
-  // Saturate while parsing so arbitrarily large numeric requests clamp safely.
-  long magnitude = 0;
-  for (; index < text.length(); index++) {
-    char digit = text.charAt(index);
-    if (digit < '0' || digit > '9') {
-      return false;
-    }
-    if (magnitude < 256) {
-      magnitude = magnitude * 10 + (digit - '0');
-      if (magnitude > 256) {
-        magnitude = 256;
-      }
-    }
-  }
-
-  value = negative ? 0 : (magnitude > 255 ? 255 : (int)magnitude);
-  return true;
+// ------------------------------------------------------------------
+// SAFETY: zero the output
+// ------------------------------------------------------------------
+void zeroOutput() {
+  currentPwm = 0;
+  digitalWrite(HBRIDGE_PIN_1, LOW);
+  digitalWrite(HBRIDGE_PIN_2, LOW);
+  analogWrite(HBRIDGE_PIN_1, 0);
+  analogWrite(HBRIDGE_PIN_2, 0);
 }
 
-void parseCommand(String command) {
-  command.trim();
-  String tokens[5];
-  int tokenCount = 0;
-  int cursor = 0;
+// ------------------------------------------------------------------
+// PARSER: handle one command line
+// ------------------------------------------------------------------
+// Accepted format (case-insensitive on keywords):
+//   SET PWM <0-255> DIR HEAT
+//   SET PWM <0-255> DIR COOL
+//
+// Any malformed or unknown command returns PWM to 0.
+void handleCommand(String line) {
+  line.trim();
+  line.toUpperCase();
 
-  // Accept exactly: SET PWM <integer> DIR HEAT|COOL. Invalid input is ignored,
-  // leaving the last valid output unchanged.
-  while (cursor < command.length()) {
-    while (cursor < command.length() &&
-           (command.charAt(cursor) == ' ' || command.charAt(cursor) == '\t')) {
-      cursor++;
-    }
-    if (cursor >= command.length()) {
-      break;
-    }
-    if (tokenCount >= 5) {
+  // Reject empty lines silently.
+  if (line.length() == 0) {
+    return;
+  }
+
+  // Tokenize by spaces.
+  // Expected tokens:
+  //   0: SET
+  //   1: PWM
+  //   2: <number>
+  //   3: DIR
+  //   4: HEAT | COOL
+  int t0 = line.indexOf(' ');
+  if (t0 < 0) { zeroOutput(); return; }
+  String tok0 = line.substring(0, t0);
+
+  int t1 = line.indexOf(' ', t0 + 1);
+  if (t1 < 0) { zeroOutput(); return; }
+  String tok1 = line.substring(t0 + 1, t1);
+
+  int t2 = line.indexOf(' ', t1 + 1);
+  if (t2 < 0) { zeroOutput(); return; }
+  String tok2 = line.substring(t1 + 1, t2);
+
+  int t3 = line.indexOf(' ', t2 + 1);
+  if (t3 < 0) { zeroOutput(); return; }
+  String tok3 = line.substring(t2 + 1, t3);
+
+  String tok4 = line.substring(t3 + 1);
+  tok4.trim();
+
+  // Validate keywords.
+  if (tok0 != "SET") { zeroOutput(); return; }
+  if (tok1 != "PWM") { zeroOutput(); return; }
+  if (tok3 != "DIR") { zeroOutput(); return; }
+  if (tok4 != "HEAT" && tok4 != "COOL") { zeroOutput(); return; }
+
+  // Validate and parse PWM value.
+  // The string must be all digits, else malformed.
+  if (tok2.length() == 0) { zeroOutput(); return; }
+  for (unsigned int i = 0; i < tok2.length(); i++) {
+    if (!isDigit(tok2.charAt(i))) {
+      zeroOutput();
       return;
     }
-    int end = cursor;
-    while (end < command.length() && command.charAt(end) != ' ' &&
-           command.charAt(end) != '\t') {
-      end++;
-    }
-    tokens[tokenCount++] = command.substring(cursor, end);
-    cursor = end;
   }
 
-  if (tokenCount != 5 || !tokens[0].equalsIgnoreCase("SET") ||
-      !tokens[1].equalsIgnoreCase("PWM") ||
-      !tokens[3].equalsIgnoreCase("DIR")) {
-    return;
-  }
+  long pwmValue = tok2.toInt();
 
-  int requestedPwm;
-  if (!parsePwm(tokens[2], requestedPwm)) {
-    return;
-  }
+  // Clamp numeric PWM to 0-255.
+  if (pwmValue < 0) pwmValue = 0;
+  if (pwmValue > 255) pwmValue = 255;
 
-  bool requestedHeating;
-  if (tokens[4].equalsIgnoreCase("HEAT")) {
-    requestedHeating = true;
-  } else if (tokens[4].equalsIgnoreCase("COOL")) {
-    requestedHeating = false;
-  } else {
-    return;
-  }
+  // Commit the new state.
+  currentPwm = (int)pwmValue;
+  currentIsHeat = (tok4 == "HEAT");
 
-  pwm = requestedPwm;
-  heating = requestedHeating;
   applyOutput();
 }
 
+// ------------------------------------------------------------------
+// SETUP
+// ------------------------------------------------------------------
 void setup() {
   pinMode(HBRIDGE_PIN_1, OUTPUT);
   pinMode(HBRIDGE_PIN_2, OUTPUT);
 
-  // Safety: reset always disables both bridge inputs; only a valid serial
-  // command can apply nonzero PWM afterward.
-  analogWrite(HBRIDGE_PIN_1, 0);
-  analogWrite(HBRIDGE_PIN_2, 0);
+  // Safety: PWM starts at zero.
+  zeroOutput();
 
-  Serial.begin(115200);
-  Serial.println("Arduino ready. Use: SET PWM 120 DIR HEAT");
+  Serial.begin(9600);
 
   startTime = millis();
   lastPrint = 0;
+  commandBuffer.reserve(64);
+
+  Serial.println("Part 6 serial-command TEC control");
+  Serial.println("Commands: SET PWM <0-255> DIR HEAT | COOL");
 }
 
+// ------------------------------------------------------------------
+// LOOP
+// ------------------------------------------------------------------
 void loop() {
-  if (Serial.available() > 0) {
-    parseCommand(Serial.readStringUntil('\n'));
+  // ---- read incoming serial commands ----
+  // We read one character at a time, accumulate into commandBuffer,
+  // and process on newline.
+  while (Serial.available() > 0) {
+    char c = (char)Serial.read();
+
+    if (c == '\n' || c == '\r') {
+      if (commandBuffer.length() > 0) {
+        handleCommand(commandBuffer);
+        commandBuffer = "";
+      }
+    } else {
+      if (commandBuffer.length() < 64) {
+        commandBuffer += c;
+      } else {
+        // Line too long: drop it and zero output.
+        commandBuffer = "";
+        zeroOutput();
+      }
+    }
   }
 
+  // ---- print the measurement line on a timer ----
   unsigned long now = millis();
 
   if (now - lastPrint >= PRINT_INTERVAL_MS) {
@@ -182,6 +250,10 @@ void loop() {
 
     float tempC = readTemperatureC();
     float elapsed = (now - startTime) / 1000.0;
+
+    int activePin = currentIsHeat ? HEAT_ACTIVE_PIN : COOL_ACTIVE_PIN;
+    int heatCool = currentIsHeat ? 1 : 0;
+    int dirInput = currentIsHeat ? 1 : 0;
 
     Serial.print("Temperature (C): ");
     if (isnan(tempC)) {
@@ -194,9 +266,15 @@ void loop() {
     Serial.print(elapsed, 2);
 
     Serial.print(", PWM: ");
-    Serial.print(pwm);
+    Serial.print(currentPwm);
+
+    Serial.print(", Direction input: ");
+    Serial.print(dirInput);
+
+    Serial.print(", Active PWM pin: ");
+    Serial.print(activePin);
 
     Serial.print(", Heat/Cool: ");
-    Serial.println(heating ? 1 : 0);
+    Serial.println(heatCool);
   }
 }
