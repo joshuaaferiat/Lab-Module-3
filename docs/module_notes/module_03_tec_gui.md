@@ -2,6 +2,27 @@
 
 This file captures the final organization and verification steps for the TEC manual-control lab.
 
+## Part 1: TEC wiring and pre-power checklist
+
+Completed before TEC power was applied.
+
+| Item | Value Or Observation |
+| --- | --- |
+| Arduino board and port | Arduino Uno; `/dev/cu.usbmodem1101` (macOS), `COM4` (Windows) |
+| Thermistor pin | A0 |
+| H-bridge control pins | 9 and 10 |
+| PWM starts at zero? | Yes |
+| Module 2 motor test completed with TEC disconnected? | Yes |
+| High-current leads are 18 AWG? | Yes |
+| Prepared TEC and thermal-switch wiring inspected? | Yes |
+| Heat exchanger connected to 12 V and operating? | Yes |
+| Power supply voltage | 12 V |
+| Power supply current limit | 10 A |
+| Thermal cutoff identified? | Yes; normally closed thermal switch in series with the TEC, 65 °C cutoff |
+| Instructor check complete? | Yes |
+
+Wiring: power-supply V+/V- connect directly to H-bridge B+/B-. On the terminal bus, H-bridge M+ connects to one thermal-switch lead, the other thermal-switch lead connects to TEC+, and TEC- connects to H-bridge M-, so opening the thermal switch interrupts TEC current. The heat exchanger (pump and fans) is powered directly from the 12 V supply.
+
 ## Recommended project structure
 
 - `arduino/tec_manual_fixed_direction/tec_manual_fixed_direction.ino` — first manual trim-pot sketch
@@ -49,7 +70,7 @@ This is the command scheme used by the Python GUI and received by the Arduino co
 
 ## Checkpoints to record
 
-- pre-power checklist
+- pre-power checklist (done — see Part 1 above)
 - oscilloscope check of Arduino control pins and H-bridge outputs
 - heating serial record
 - cooling serial record
