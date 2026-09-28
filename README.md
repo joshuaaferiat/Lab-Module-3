@@ -76,7 +76,7 @@ The Python programs write CSV files with columns `time_s`, `temperature_C`, `pwm
 
 The Part 6 sketch has compiled successfully for the Uno target. A compile does not verify the physical direction mapping, wiring, TEC response, GUI operation, or saved measurements. Record the following after performing the corresponding checks; do not treat code labels as evidence:
 
-- Completed pre-power checklist, wiring/current-limit record, and instructor check.
+- ~~Completed pre-power checklist, wiring/current-limit record, and instructor check.~~ Recorded in `docs/module_notes/module_03_tec_gui.md` (Part 1).
 - Oscilloscope observations for pins 9/10 with TEC power off, and M+/M- only after approval and at low PWM.
 - Heating and cooling serial records showing that `Heat/Cool` matches observed temperature change.
 - Zero-PWM startup, serial-command, Python integration, plot, and CSV checks.
