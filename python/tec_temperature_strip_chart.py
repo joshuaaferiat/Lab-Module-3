@@ -23,7 +23,7 @@ import pyqtgraph as pg
 # ------------------------------------------------------------------
 SERIAL_PORT = "/dev/cu.usbmodem1101"                # Windows example. macOS: /dev/cu.usbmodemXXXX
                                     # Linux: /dev/ttyACM0 or /dev/ttyUSB0
-BAUD_RATE = 9600
+BAUD_RATE = 115200
 
 WINDOW_SECONDS = 60.0               # visible strip-chart window duration
 PLOT_UPDATE_MS = 100                # plot update interval (ms)

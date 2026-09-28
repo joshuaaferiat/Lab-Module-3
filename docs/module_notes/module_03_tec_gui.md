@@ -4,12 +4,14 @@ This file captures the final organization and verification steps for the TEC man
 
 ## Recommended project structure
 
-- `part3.ino` — second manual sketch with hardware direction input
-- `part4.py` — display-only temperature strip chart
-- `part5.py` — complete GUI with PWM control and serial commands
-- `part6.ino` — serial-command Arduino sketch
-- `part7.py` — quick verification helper for paired Arduino/Python testing
+- `arduino/tec_manual_fixed_direction/tec_manual_fixed_direction.ino` — first manual trim-pot sketch
+- `arduino/tec_manual_hardware_direction/tec_manual_hardware_direction.ino` — manual trim-pot sketch with hardware direction input
+- `arduino/tec_python_control/tec_python_control.ino` — serial-command Arduino sketch
+- `python/tec_temperature_strip_chart.py` — display-only temperature strip chart
+- `python/tec_control_gui.py` — PWM GUI; a user-operated HEAT/COOL control is still needed for bidirectional operation
+- `python/tec_serial_check.py` — command-and-read verification helper
 - `README.md` — project description, hardware mapping, run instructions, and notes
+- `requirements.txt` — Python dependencies
 
 ## Hardware mapping
 
@@ -37,13 +39,13 @@ This is the command scheme used by the Python GUI and received by the Arduino co
 
 ## Run order
 
-1. Upload `part3.ino` or `part6.ino` to the Arduino.
+1. Upload the matching sketch from the `arduino/` directory to the Arduino.
 2. Open the serial monitor only to verify measurements or command behavior.
 3. Close serial monitor before running the Python GUI.
 4. Run the desired Python script:
-   - `python part4.py` for display-only plotting
-   - `python part5.py` for manual GUI control
-   - `python part7.py` for a simple command-and-read verification
+   - `python python/tec_temperature_strip_chart.py` for display-only plotting with the Part 6 sketch at 115200 baud
+   - `python python/tec_control_gui.py` for the current PWM GUI with the Part 6 sketch at 115200 baud
+   - `python python/tec_serial_check.py` for command-and-read verification with the Part 6 sketch at 115200 baud
 
 ## Checkpoints to record
 

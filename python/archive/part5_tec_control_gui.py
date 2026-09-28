@@ -2,17 +2,17 @@
 """Part 5: manual control GUI for the TEC experiment.
 
 Features:
-- heat/cool switch
 - PWM slider and text box synchronized
 - temperature, PWM, direction, and elapsed-time readouts
-- temperature plot and command plot
-- serial output commands in the required format
+- temperature and PWM plots
+- CSV logging and serial commands
 """
 
 import csv
 import re
 import sys
 from collections import deque
+from pathlib import Path
 
 import serial
 from PySide6.QtCore import Qt, QTimer
@@ -32,7 +32,7 @@ PORT = "/dev/tty.usbmodem1101"
 BAUD = 115200
 WINDOW_SECONDS = 60.0
 PLOT_INTERVAL_MS = 100
-OUTPUT_FILE = "part5_control_data.csv"
+OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "module_03" / "tec_control_data.csv"
 
 MEASUREMENT_PATTERN = re.compile(
     r"Temperature \(C\):\s*([-+]?\d*\.?\d+)\s*,\s*Time \(s\):\s*([-+]?\d*\.?\d+)\s*,\s*PWM:\s*(\d+)\s*,\s*Heat/Cool:\s*([01])"
@@ -50,6 +50,7 @@ class ControlWindow(QMainWindow):
         self.time_history = deque()
         self.pwm_history = deque()
 
+        OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
         self.csv_file = open(OUTPUT_FILE, "w", newline="")
         self.csv_writer = csv.writer(self.csv_file)
         self.csv_writer.writerow(["time_s", "temperature_C", "pwm", "heat_cool"])
@@ -119,8 +120,7 @@ class ControlWindow(QMainWindow):
         self.send_command()
 
     def send_command(self):
-        direction = self.current_direction
-        command = f"SET PWM {self.current_pwm} DIR {direction}\n"
+        command = f"SET PWM {self.current_pwm} DIR {self.current_direction}\\n"
         if self.serial_port.is_open:
             self.serial_port.write(command.encode("utf-8"))
 
@@ -161,10 +161,7 @@ class ControlWindow(QMainWindow):
 
 
 def parse_measurement(line: str):
-    match = re.search(
-        r"Temperature \(C\):\s*([-+]?\d*\.?\d+)\s*,\s*Time \(s\):\s*([-+]?\d*\.?\d+)\s*,\s*PWM:\s*(\d+)\s*,\s*Heat/Cool:\s*([01])",
-        line,
-    )
+    match = MEASUREMENT_PATTERN.search(line)
     if not match:
         return None
 
