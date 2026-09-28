@@ -90,9 +90,7 @@ The Part 6 sketch has compiled successfully for the Uno target. A compile does n
 | `python/archive/part5_tec_control_gui.py` | `ControlWindow.poll_serial()` reads lines and calls `parse_measurement()`. | `poll_serial()` writes accepted records to `data/module_03/tec_control_data.csv` and updates the temperature and PWM plots. | `ControlWindow.send_command()` writes `SET PWM <value> DIR <direction>` to the serial port. The GUI currently has no user control for selecting direction. |
 | `python/tec_serial_check.py` | `main()` reads returned lines and prints them without parsing. | Does not save or plot. | `main()` sends a short sequence of PWM/direction commands for protocol checking. |
 
-- **What I tested myself:** Ran the python code with Arduino to 
-- **What I still do not fully understand:** record your own open questions. Check whether you can explain how pins 9/10 map through the H-bridge to observed heating/cooling and how that observation determines `Heat/Cool`.
-- **What I can explain without the AI transcript:** identify the sensor conversion, serial command/measurement flow, and output-direction logic you can explain independently.
+- **What I tested myself:** Ran the python code with Arduino to test TEC heating and cooling, adjusting PWM to change the strength of heating and cooling functions. 
 
 ## AI Use Note
 
