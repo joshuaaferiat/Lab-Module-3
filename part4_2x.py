@@ -13,7 +13,7 @@ import re
 from collections import deque
 from pathlib import Path
 
-import serials
+import serial
 from PySide6 import QtCore, QtWidgets
 import pyqtgraph as pg
 

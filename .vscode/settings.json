@@ -1,3 +1,10 @@
 {
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv312/bin/python",
+    "chat.tools.terminal.autoApprove": {
+        "/^source \\.venv/bin/activate && python - <<'PY'\nimport os\nfrom PySide6\\.QtCore import QLibraryInfo\nprint\\('QT_PLUGIN_PATH =', os\\.environ\\.get\\('QT_PLUGIN_PATH'\\)\\)\nprint\\('PluginsPath =', QLibraryInfo\\.path\\(QLibraryInfo\\.PluginsPath\\)\\)\nprint\\('LibrariesPath =', QLibraryInfo\\.path\\(QLibraryInfo\\.LibrariesPath\\)\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }
