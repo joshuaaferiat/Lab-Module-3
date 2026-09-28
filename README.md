@@ -10,7 +10,7 @@ This project follows the [Phys 39 Module 3 assignment](https://sethfraden.github
 | `arduino/tec_manual_hardware_direction/tec_manual_hardware_direction.ino` | Part 3 trim-pot control with a direction switch on pin 11. Serial rate: 9600 baud. |
 | `arduino/tec_python_control/tec_python_control.ino` | Part 6 Python-commanded control. Starts at PWM zero, accepts `SET PWM ... DIR ...`, and prints the four-field measurement line at 115200 baud. |
 | `python/tec_temperature_strip_chart.py` | Display-only chart for the four-field Part 6 measurement line; writes to `data/module_03/part4_temperature_strip_chart.csv`. |
-| `python/tec_control_gui.py` | PWM slider/text entry, measurement readouts, two plots, CSV logging, and serial commands. The current GUI has no user-operated HEAT/COOL selector, so bidirectional GUI control remains unfinished. |
+| `python/archive/part5_tec_control_gui.py` | Part 5 GUI prototype with PWM slider/text entry, measurement readouts, two plots, CSV logging, and serial commands. It has no user-operated HEAT/COOL selector, so bidirectional GUI control remains unfinished. |
 | `python/tec_serial_check.py` | Serial command-and-read helper for checking the Part 6 protocol at 115200 baud. |
 | `python/archive/part4_extended_serial.py` | Preserved chart variant for the Part 3 extended measurement line. |
 | `arduino/legacy/` | Preserved alternate sketches that are not the primary three in this structure. |
@@ -67,7 +67,7 @@ Temperature (C): 27.73, Time (s): 645.06, PWM: 120, Heat/Cool: 1
 6. Run the matching program:
 
 	- `python python/tec_temperature_strip_chart.py` with the Part 6 sketch at 115200 baud for display-only plotting.
-	- `python python/tec_control_gui.py` with the Part 6 sketch at 115200 baud for PWM control and plotting. The GUI still needs a HEAT/COOL input before it can request both directions.
+	- `python python/archive/part5_tec_control_gui.py` with the Part 6 sketch at 115200 baud for PWM control and plotting. The GUI still needs a HEAT/COOL input before it can request both directions.
 	- `python python/tec_serial_check.py` with the Part 6 sketch at 115200 baud for a command-and-read check. Keep TEC power off or use only the instructor-approved low-power test procedure.
 
 ## Data and Verification Status
@@ -82,6 +82,18 @@ The Part 6 sketch has compiled successfully for the Uno target. A compile does n
 - Zero-PWM startup, serial-command, Python integration, plot, and CSV checks.
 - Any remaining uncertainties and what you verified on the physical apparatus.
 
+## Python Data Flow
+
+| Program | Read and parse | Save and plot | Send |
+| --- | --- | --- | --- |
+| `python/tec_temperature_strip_chart.py` | `SerialReader.run()` opens `SERIAL_PORT` at `BAUD_RATE` and reads lines; `parse_measurement()` parses the four-field line. | `StripChart.on_line()` stores accepted values and writes `data/module_03/part4_temperature_strip_chart.csv`; `StripChart.update_plot()` draws temperature versus time. | Display-only; it sends no commands. |
+| `python/archive/part5_tec_control_gui.py` | `ControlWindow.poll_serial()` reads lines and calls `parse_measurement()`. | `poll_serial()` writes accepted records to `data/module_03/tec_control_data.csv` and updates the temperature and PWM plots. | `ControlWindow.send_command()` writes `SET PWM <value> DIR <direction>` to the serial port. The GUI currently has no user control for selecting direction. |
+| `python/tec_serial_check.py` | `main()` reads returned lines and prints them without parsing. | Does not save or plot. | `main()` sends a short sequence of PWM/direction commands for protocol checking. |
+
+- **What I tested myself:** Ran the python code with Arduino to 
+- **What I still do not fully understand:** record your own open questions. Check whether you can explain how pins 9/10 map through the H-bridge to observed heating/cooling and how that observation determines `Heat/Cool`.
+- **What I can explain without the AI transcript:** identify the sensor conversion, serial command/measurement flow, and output-direction logic you can explain independently.
+
 ## AI Use Note
 
-AI assistance was used to develop the Python-commanded Arduino sketch, configure its VS Code compile task, and draft this README. Review the parser, pin mapping, and safety instructions and record which hardware tests you personally completed and which parts you can explain independently before using this as a C3 project record.
+AI assistance generated the initial Python-commanded Arduino sketch, carried the existing Part 5 GUI source into `python/archive/part5_tec_control_gui.py`, corrected its serial line ending and CSV path, adjusted the chart baud, organized files, and drafted this README. I moved the GUI into the archive during integration. The repository cannot establish which earlier logic changes I personally authored or which parts I can explain without the transcript, so I must complete the personal record above. No hardware test is attributed to AI assistance.

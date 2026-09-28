@@ -32,7 +32,7 @@ PORT = "/dev/tty.usbmodem1101"
 BAUD = 115200
 WINDOW_SECONDS = 60.0
 PLOT_INTERVAL_MS = 100
-OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "module_03" / "tec_control_data.csv"
+OUTPUT_FILE = Path(__file__).resolve().parents[2] / "data" / "module_03" / "tec_control_data.csv"
 
 MEASUREMENT_PATTERN = re.compile(
     r"Temperature \(C\):\s*([-+]?\d*\.?\d+)\s*,\s*Time \(s\):\s*([-+]?\d*\.?\d+)\s*,\s*PWM:\s*(\d+)\s*,\s*Heat/Cool:\s*([01])"
@@ -120,7 +120,7 @@ class ControlWindow(QMainWindow):
         self.send_command()
 
     def send_command(self):
-        command = f"SET PWM {self.current_pwm} DIR {self.current_direction}\\n"
+        command = f"SET PWM {self.current_pwm} DIR {self.current_direction}\n"
         if self.serial_port.is_open:
             self.serial_port.write(command.encode("utf-8"))
 
