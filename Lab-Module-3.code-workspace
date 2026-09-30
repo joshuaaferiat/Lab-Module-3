@@ -1,0 +1,40 @@
+{
+	"folders": [
+		{
+			"name": "Lab-Module-3",
+			"path": "."
+		},
+		{
+			"name": "part4",
+			"path": "../../../Downloads/drive-download-20260928T150316Z-1-001/part4"
+		},
+		{
+			"name": "part5",
+			"path": "../../../Downloads/drive-download-20260928T150316Z-1-001/part5"
+		},
+		{
+			"name": "part6",
+			"path": "../../../Downloads/drive-download-20260928T150316Z-1-001/part6"
+		},
+		{
+			"name": "part7",
+			"path": "../../../Downloads/drive-download-20260928T150316Z-1-001/part7"
+		},
+		{
+			"name": "drive-download-20260928T152048Z-1-001",
+			"path": "../../../Downloads/drive-download-20260928T152048Z-1-001"
+		},
+		{
+			"name": "drive-download-20260928T152027Z-1-001",
+			"path": "../../../Downloads/drive-download-20260928T152027Z-1-001"
+		}
+	],
+	"settings": {
+		"chat.tools.terminal.autoApprove": {
+			"/^source \\.venv/bin/activate && python - <<'PY'\nimport os\nfrom PySide6\\.QtCore import QLibraryInfo\nprint\\('QT_PLUGIN_PATH =', os\\.environ\\.get\\('QT_PLUGIN_PATH'\\)\\)\nprint\\('PluginsPath =', QLibraryInfo\\.path\\(QLibraryInfo\\.PluginsPath\\)\\)\nprint\\('LibrariesPath =', QLibraryInfo\\.path\\(QLibraryInfo\\.LibrariesPath\\)\\)\nPY$/": {
+				"approve": true,
+				"matchCommandLine": true
+			}
+		}
+	}
+}
