@@ -9,12 +9,19 @@ measurement lines so the operator can verify that PWM and direction are working.
 import time
 import serial
 
-PORT = "/dev/tty.usbmodem1101"
+PORT = "/dev/cu.usbmodem101"
 BAUD = 115200
 
 
 def main():
-    ser = serial.Serial(PORT, BAUD, timeout=0.1)
+    try:
+        ser = serial.Serial(PORT, BAUD, timeout=0.1)
+    except serial.SerialException as exc:
+        raise SystemExit(
+            f"Could not open {PORT}: {exc}. Close Arduino Serial Monitor/Plotter "
+            "and try again."
+        ) from exc
+
     time.sleep(2.0)
 
     for pwm, direction in [(0, "HEAT"), (40, "HEAT"), (80, "COOL"), (120, "COOL")]:

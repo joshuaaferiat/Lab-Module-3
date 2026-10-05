@@ -21,7 +21,7 @@ import pyqtgraph as pg
 # ------------------------------------------------------------------
 # CONFIGURATION  (edit these near the top)
 # ------------------------------------------------------------------
-SERIAL_PORT = "/dev/cu.usbmodem1101"                # Windows example. macOS: /dev/cu.usbmodemXXXX
+SERIAL_PORT = "/dev/cu.usbmodem101"                # Windows example. macOS: /dev/cu.usbmodemXXXX
                                     # Linux: /dev/ttyACM0 or /dev/ttyUSB0
 BAUD_RATE = 115200
 
