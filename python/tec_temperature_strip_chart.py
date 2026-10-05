@@ -137,6 +137,9 @@ class StripChart(QtWidgets.QMainWindow):
     # -------------- one line received --------------
     @QtCore.Slot(str)
     def on_line(self, line: str):
+        if self.csv_file is None:
+            return
+
         parsed = parse_measurement(line)
         if parsed is None:
             return
