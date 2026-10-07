@@ -20,7 +20,7 @@ const int THERMISTOR_PIN = A0;
 const int HBRIDGE_PIN_1 = 9;
 const int HBRIDGE_PIN_2 = 10;
 
-const int ADC_SAMPLES = 200;
+const int ADC_SAMPLES = 1000;
 const unsigned long PRINT_INTERVAL_MS = 200;
 
 // Thermistor constants -- Module 2 values.

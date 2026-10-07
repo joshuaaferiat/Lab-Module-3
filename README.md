@@ -1,6 +1,6 @@
 # Module 3: TEC Manual Control and Python GUI
 
-This project follows the [Phys 39 Module 3 assignment](https://sethfraden.github.io/Phys39F26-course/labs/lab-03/). It measures temperature from a thermistor on a thermoelectric cooler (TEC), drives the TEC through an H-bridge, and explores open-loop manual control from Arduino and Python. It does not implement automatic temperature feedback.
+This project follows the [Phys 39 Module 3 assignment](https://sethfraden.github.io/Phys39F26-course/labs/lab-03/). It measures temperature from a thermistor on a thermoelectric cooler (TEC), drives the TEC through an H-bridge, and explores manual control from Arduino and Python. The Module 5 GUI also provides fixed-gain P-only temperature feedback.
 
 ## Project Files
 
@@ -8,7 +8,8 @@ This project follows the [Phys 39 Module 3 assignment](https://sethfraden.github
 | --- | --- |
 | `arduino/tec_manual_fixed_direction/tec_manual_fixed_direction.ino` | Part 2 trim-pot control: A0 thermistor, A1 PWM command, pin 10 PWM. Serial rate: 9600 baud. |
 | `arduino/tec_manual_hardware_direction/tec_manual_hardware_direction.ino` | Part 3 trim-pot control with a direction switch on pin 11. Serial rate: 9600 baud. |
-| `arduino/tec_python_control/tec_python_control.ino` | Part 6 Python-commanded control. Starts at PWM zero, accepts `SET PWM ... DIR ...`, and prints the four-field measurement line at 115200 baud. |
+| `arduino/tec_python_control/tec_python_control.ino` | Part 6 Python-commanded control. Starts at PWM zero, accepts `SET PWM ... DIR ...`, and prints the four-field measurement line at 9600 baud. |
+| `python/tec_module5_calibration_gui.py` | Module 5 calibration GUI with manual PWM control and optional P-only feedback using the fixed `Kp = 10 PWM/°C`; Python sends direction and PWM magnitude using the existing Arduino command protocol. |
 | `python/tec_temperature_strip_chart.py` | Display-only chart for the four-field Part 6 measurement line; writes to `data/module_03/part4_temperature_strip_chart.csv`. |
 | `python/archive/part5_tec_control_gui.py` | Part 5 GUI prototype with PWM slider/text entry, measurement readouts, two plots, CSV logging, and serial commands. It has no user-operated HEAT/COOL selector, so bidirectional GUI control remains unfinished. |
 | `python/tec_serial_check.py` | Serial command-and-read helper for checking the Part 6 protocol at 115200 baud. |
@@ -31,7 +32,7 @@ The Arduino, H-bridge, and oscilloscope signal reference must share the required
 
 ## Serial Interface
 
-`arduino/tec_python_control/tec_python_control.ino` runs at 115200 baud and accepts newline-terminated commands:
+`arduino/tec_python_control/tec_python_control.ino` runs at 9600 baud and accepts newline-terminated commands:
 
 ```text
 SET PWM 120 DIR HEAT
